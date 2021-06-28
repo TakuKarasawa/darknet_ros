@@ -1,6 +1,8 @@
 from ctypes import *
 import math
 import random
+import sys
+import cv2
 
 def sample(probs):
     s = sum(probs)
@@ -114,6 +116,11 @@ predict_image = lib.network_predict_image
 predict_image.argtypes = [c_void_p, IMAGE]
 predict_image.restype = POINTER(c_float)
 
+# ndarryを読み込む処理を追加
+ndarray_image = lib.ndarray_to_image
+ndarray_image.argtypes = [POINTER(c_ubyte),POINTER(c_long),POINTER(c_long)]
+ndarray_image.restype = IMAGE
+
 def classify(net, meta, im):
     out = predict_image(net, im)
     res = []
@@ -141,7 +148,44 @@ def detect(net, meta, image, thresh=.5, hier_thresh=.5, nms=.45):
     free_image(im)
     free_detections(dets, num)
     return res
+
+# opencv用
+def detect_np(net,meta,np_img,thresh=.5,hier_thresh=.5,nms=.45):
+    im = nparray_to_image(np_img)
+    num = c_int(0)
+    pnum = pointer(num)
+    predict_image(net,im)
+    dets = get_network_boxes(net, im.w, im.h, thresh, hier_thresh, None, 0, pnum)
+    num = pnum[0]
+    if (nms): do_nms_obj(dets, num, meta.classes, nms)
+    res = []
+    for j in range(num):
+        for i in range(meta.classes):
+            if dets[j].prob[i] > 0:
+                b = dets[j].bbox
+                res.append((meta.names[i], dets[j].prob[i], (b.x, b.y, b.w, b.h)))
     
+    res = sorted(res, key=lambda x: -x[1])
+    free_image(im)
+    free_detections(dets, num)
+
+    return res
+
+# 可視化用
+def check_detected_result_image(np_img,yolo_res):
+    result_img = np_img
+    for j in range(len(yolo_res)):
+        left_top_x = int(yolo_res[j][2][0] - yolo_res[j][2][2] / 2)
+        left_top_y = int(yolo_res[j][2][1] - yolo_res[j][2][3] / 2)
+        right_top_x = int(yolo_res[j][2][0] + yolo_res[j][2][2] / 2)
+        right_top_y = int(yolo_res[j][2][1] + yolo_res[j][2][3] / 2)
+        result_img = cv2.rectangle(result_img, (left_top_x, left_top_y), (right_top_x, right_top_y),(255, 255, 255), 3)
+        if len(yolo_res) > 0:
+            font = cv2.FONT_HERSHEY_PLAIN
+            cv2.putText(result_img, yolo_res[j][0],(max(int(yolo_res[j][2][0]) - 20, 0), int(yolo_res[j][2][1])), font, 3,(255, 255, 0), 1, cv2.LINE_AA)
+            cv2.putText(result_img, str("{:.2}".format(yolo_res[j][1])),(max(int(yolo_res[j][2][0]) - 20, 0), int(yolo_res[j][2][1] + 40)), font, 3,(255, 0, 255), 1, cv2.LINE_AA)
+    return result_img
+
 if __name__ == "__main__":
     #net = load_net("cfg/densenet201.cfg", "/home/pjreddie/trained/densenet201.weights", 0)
     #im = load_image("data/wolf.jpg", 0, 0)
@@ -152,5 +196,3 @@ if __name__ == "__main__":
     meta = load_meta("cfg/coco.data")
     r = detect(net, meta, "data/dog.jpg")
     print r
-    
-

@@ -147,6 +147,10 @@ void YoloObjectDetector::init() {
   detectionImagePublisher_ =
       nodeHandle_.advertise<sensor_msgs::Image>(detectionImageTopicName, detectionImageQueueSize, detectionImageLatch);
 
+  // Debug用
+  //image_pub = nodeHandle_.advertise<sensor_msgs::Image>("/detected_image",10);
+  image_pub = imageTransport_.advertise("/detected_image",10);
+
   // Action servers.
   std::string checkForObjectsActionName;
   nodeHandle_.param("actions/camera_reading/topic", checkForObjectsActionName, std::string("check_for_objects"));
@@ -381,6 +385,13 @@ void* YoloObjectDetector::fetchInThread() {
 
 void* YoloObjectDetector::displayInThread(void* ptr) {
   int c = show_image(buff_[(buffIndex_ + 1) % 3], "YOLO", 1);
+
+  // Publish用
+  if(1){
+    sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(),"bgr8",image_to_mat(buff_[(buffIndex_ + 1) % 3])).toImageMsg();
+    image_pub.publish(msg);
+  }
+
   if (c != -1) c = c % 256;
   if (c == 27) {
     demoDone_ = 1;

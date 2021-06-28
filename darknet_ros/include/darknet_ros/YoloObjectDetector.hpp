@@ -150,6 +150,10 @@ class YoloObjectDetector {
   ros::Publisher objectPublisher_;
   ros::Publisher boundingBoxesPublisher_;
 
+  // Debug用
+  //ros::Publisher image_pub;
+  image_transport::Publisher image_pub;
+
   //! Detected objects.
   std::vector<std::vector<RosBox_> > rosBoxes_;
   std::vector<int> rosBoxCounter_;

@@ -17,6 +17,7 @@ extern "C" {
 void *open_video_stream(const char *f, int c, int w, int h, int fps);
 image get_image_from_stream(void *p);
 image load_image_cv(char *filename, int channels);
+image ndarray_to_image(unsigned char* src,long* shape,long* strides);
 int show_image_cv(image im, const char* name, int ms);
 #endif
 
