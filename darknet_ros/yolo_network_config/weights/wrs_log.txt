@@ -1,0 +1,2 @@
+wrs_1.weights -> 20000 batch
+wrs_2.weights -> 30000 batch
